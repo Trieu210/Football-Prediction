@@ -1,0 +1,45 @@
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+}
+
+.container-fluid,
+.content {
+  max-width: 1440px;
+  margin: auto;
+}
+
+.section-title {
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+/* Sticky behavior like tutorial */
+
+#game-content {
+  position: sticky;
+  top: 70px;
+  overflow-y: auto;
+}
+
+#game-content api-sports-widget {
+  max-height: calc(100vh - 120px);
+}
+
+#standings-content api-sports-widget,
+#team-content api-sports-widget {
+  margin-bottom: 1rem;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+#leagues-list {
+  position: sticky;
+  top: 70px;
+  overflow-y: auto;
+}

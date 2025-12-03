@@ -1,0 +1,159 @@
+/* Grid of cards */
+.matches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+/* Match card */
+.match-card {
+  background-color: #020617;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #1f2937;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  color: #e5e7eb;
+  font-size: 0.9rem;
+}
+
+/* Header */
+.match-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.4rem;
+}
+
+.match-league {
+  color: #93c5fd;
+  font-weight: 600;
+}
+
+.match-season {
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+
+.match-date {
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+
+/* Teams */
+.match-teams {
+  margin-bottom: 0.6rem;
+}
+
+.team-row {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  align-items: center;
+  margin: 0.1rem 0;
+}
+
+.team-label {
+  font-size: 0.75rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  text-align: center;
+}
+
+.home-label {
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.away-label {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #fb7185;
+}
+
+.team-name {
+  font-weight: 500;
+  margin-left: 0.4rem;
+}
+
+.team-score {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+/* Probability bar */
+.prob-bar {
+  display: flex;
+  border-radius: 999px;
+  overflow: hidden;
+  height: 20px;
+  margin-top: 0.25rem;
+  border: 1px solid #111827;
+}
+
+.prob-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.home-segment {
+  background: linear-gradient(to right, #22c55e, #16a34a);
+}
+
+.draw-segment {
+  background: linear-gradient(to right, #6b7280, #4b5563);
+}
+
+.away-segment {
+  background: linear-gradient(to right, #f97373, #ef4444);
+}
+
+/* Legend under bar */
+.prob-legend {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #d1d5db;
+  margin-top: 0.25rem;
+}
+
+/* Season dropdown */
+.season-select {
+  background-color: #111827;
+  color: #e5e7eb;
+  border-radius: 999px;
+  border: 1px solid #374151;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+/* Pagination */
+.matches-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  color: #e5e7eb;
+  font-size: 0.85rem;
+}
+
+.matches-pagination button {
+  background-color: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  color: #e5e7eb;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.matches-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.matches-pagination button:not(:disabled):hover {
+  background-color: #111827;
+}
