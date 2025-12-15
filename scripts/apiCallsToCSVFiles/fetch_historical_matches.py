@@ -1,19 +1,18 @@
 import requests
 import pandas as pd
 from pathlib import Path
+from dotenv import load_dotenv
+import os
+from scripts.db_pg import insert_fixtures
 
-API_KEY = open("api_key.txt").read().strip()
+load_dotenv()
 
+
+API_KEY = os.getenv("API_FOOTBALL_KEY")
 BASE_URL = "https://v3.football.api-sports.io"
 HEADERS = {"x-apisports-key": API_KEY}
 
-LEAGUES = {
-    "Premier League": 39,
-    "La Liga": 140,
-    "Bundesliga": 78,
-    "Serie A": 135,
-    "Ligue 1": 61
-}
+LEAGUE_IDS = [39, 140, 78, 135, 61]  #Premier League, La Liga, Bundesliga, Serie A, Ligue 1
 
 OUTPUT_DIR = Path("data_api_football")
 OUTPUT_DIR.mkdir(exist_ok=True)
@@ -80,7 +79,7 @@ def get_matches(league_code, league_id, seasons):
 def main():
     all_rows = []
 
-    for code, league_id in LEAGUES.items():
+    for code, league_id in LEAGUE_IDS.items():
         print(f"\n=== Getting seasons for {code} ({league_id}) ===")
         seasons = get_league_seasons(league_id)
 
@@ -99,10 +98,12 @@ def main():
         return
 
     df = pd.DataFrame(all_rows)
+    df["date"] = pd.to_datetime(df["date"], utc=True, errors="coerce")
+    rows = df.to_dict(orient="records")
+    inserted_count = insert_fixtures(rows)
+    print(f"\nInserted/Updated {inserted_count} fixtures into the database.")
     out_file = OUTPUT_DIR / "All_matches_2018-2025.csv"
     df.to_csv(out_file, index=False)
-
-    print("\n================================================")
     print("DONE! Saved:", out_file)
     print("Total matches:", len(df))
 

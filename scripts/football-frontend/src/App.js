@@ -25,7 +25,6 @@ function App() {
         <main style={{ flex: 1, padding: "20px" }}>
           <Routes>
             <Route path="/league/:leagueName" element={<LeaguePage />} />
-            {/* you can add more routes here later */}
           </Routes>
         </main>
       </div>

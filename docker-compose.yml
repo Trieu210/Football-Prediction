@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: football
+      POSTGRES_USER: football
+      POSTGRES_PASSWORD: football
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    depends_on: [zookeeper]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  backend:
+    build: ./scripts/football-backend
+    depends_on: [postgres]
+    ports:
+      - "5000:5000"
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: football
+      PGUSER: football
+      PGPASSWORD: football
+
+  producer:
+    build:
+      context: ./scripts
+      dockerfile: producer/Dockerfile
+    depends_on: [kafka]
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      API_FOOTBALL_KEY: ${API_FOOTBALL_KEY}
+    restart: unless-stopped
+
+  consumer:
+    build:
+      context: ./scripts
+      dockerfile: consumer/Dockerfile
+    depends_on: [kafka, postgres]
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: football
+      PGUSER: football
+      PGPASSWORD: football
+    restart: unless-stopped
+  
+  frontend:
+    build: ./scripts/football-frontend
+    depends_on: [backend]
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_BASE: http://backend:5000
+
+volumes:
+  pgdata:

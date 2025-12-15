@@ -2,9 +2,14 @@ import time
 import requests
 import pandas as pd
 from pathlib import Path
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from db_pg import get_db_connection, insert_match_stats
 
-API_KEY = open("api_key.txt").read().strip()
-
+from dotenv import load_dotenv
+load_dotenv()
+API_KEY = os.getenv("API_FOOTBALL_KEY")
 BASE_URL = "https://v3.football.api-sports.io"
 HEADERS = {"x-apisports-key": API_KEY}
 
@@ -13,7 +18,7 @@ OUTPUT_CSV = Path("data_api_football") / "All_matches_2018-2025_with_stats.csv"
 
 
 def extract_stat(stats_list, stat_name):
-    """Find a stat in API-Football statistics list by its 'type'."""
+    #Find a stat in API-Football statistics list by its 'type'.
     for s in stats_list:
         if s.get("type") == stat_name:
             val = s.get("value")
@@ -32,7 +37,7 @@ def extract_stat(stats_list, stat_name):
 
 
 def fetch_fixture_stats(fixture_id, home_team_name, away_team_name):
-    """Fetch stats for one fixture, return dict of home/away metrics."""
+    #Fetch stats for one fixture, return dict of home/away metrics.
     url = f"{BASE_URL}/fixtures/statistics"
     params = {"fixture": fixture_id}
 
@@ -82,12 +87,48 @@ def fetch_fixture_stats(fixture_id, home_team_name, away_team_name):
     return combined
 
 
-def main():
-    df = pd.read_csv(INPUT_CSV)
-    print("Loaded matches:", len(df))
+# def main():
+#     df = pd.read_csv(INPUT_CSV)
+#     print("Loaded matches:", len(df))
 
-    rows = []
+#     rows = []
+#     total = len(df)
+
+#     for i, row in df.iterrows():
+#         fixture_id = int(row["fixture_id"])
+#         home_team = row["home_team"]
+#         away_team = row["away_team"]
+
+#         print(f"[{i+1}/{total}] fixture={fixture_id} {home_team} vs {away_team}")
+#         stats = fetch_fixture_stats(fixture_id, home_team, away_team)
+
+#         out_row = row.to_dict()
+#         out_row.update(stats)
+#         rows.append(out_row)
+#         time.sleep(0.15)
+
+#     out_df = pd.DataFrame(rows)
+#     print("Final rows:", len(out_df))
+#     out_df.to_csv(OUTPUT_CSV, index=False)
+#     print("Saved with stats to:", OUTPUT_CSV)
+
+def main():
+    # Pull fixtures from DB
+    conn = get_db_connection() 
+    try:
+        df = pd.read_sql("""
+            SELECT fixture_id, home_team, away_team
+            FROM fixtures
+            ORDER BY date DESC NULLS LAST
+        """, conn)
+    finally:
+        conn.close()
+
+    print("Loaded fixtures from DB:", len(df))
+
     total = len(df)
+    inserted = 0
+    skipped = 0
 
     for i, row in df.iterrows():
         fixture_id = int(row["fixture_id"])
@@ -95,19 +136,16 @@ def main():
         away_team = row["away_team"]
 
         print(f"[{i+1}/{total}] fixture={fixture_id} {home_team} vs {away_team}")
+
         stats = fetch_fixture_stats(fixture_id, home_team, away_team)
+        if not stats:
+            skipped += 1
+            time.sleep(0.15)
+            continue
 
-        out_row = row.to_dict()
-        out_row.update(stats)
-        rows.append(out_row)
-
-        # be a bit gentle to avoid hitting limits hard
-        time.sleep(0.15)
-
-    out_df = pd.DataFrame(rows)
-    print("Final rows:", len(out_df))
-    out_df.to_csv(OUTPUT_CSV, index=False)
-    print("Saved with stats to:", OUTPUT_CSV)
+        insert_match_stats(fixture_id, stats)
+        inserted += 1
+    print(f"DONE. Upserted stats={inserted}, skipped(no stats)={skipped}")
 
 
 if __name__ == "__main__":

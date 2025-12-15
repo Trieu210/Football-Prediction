@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import MatchCard from "./MatchCard";
 
+const API = ProcessingInstruction.env.REACT_APP_API_URL || "http://127.0.0.1:5000";
 const LeagueMatches = (props) => {
   // league from prop or URL
   const { leagueName } = useParams();
@@ -23,6 +24,10 @@ const LeagueMatches = (props) => {
   const [errorFinished, setErrorFinished] = useState("");
   const [errorUpcoming, setErrorUpcoming] = useState("");
 
+  const[liveMatches, setLiveMatches] = useState([])
+  const[loadingLive, setLoadingLive] = useState(false)
+  const[errorLive, setErrorLive] = useState("")
+
   const PAGE_SIZE = 5;
 
   // separate pagination for upcoming and finished
@@ -38,7 +43,7 @@ const LeagueMatches = (props) => {
       params.append("league", league);
 
       const res = await fetch(
-        `http://127.0.0.1:5000/api/seasons?${params.toString()}`
+        `${API}/api/seasons?${params.toString()}`
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -55,97 +60,136 @@ const LeagueMatches = (props) => {
     }
   };
 
-  //  Fetch finished matches (with probs) 
+  // Fetch finished matches with predictions
   const fetchFinishedMatches = async () => {
-    if (!league || !seasonFilter) return;
+  if (!league || !seasonFilter) return;
 
-    setLoadingFinished(true);
-    setErrorFinished("");
+  setLoadingFinished(true);
+  setErrorFinished("");
 
-    try {
-      const params = new URLSearchParams();
-      params.append("limit", String(limit));
-      params.append("league", league);
-      params.append("season", seasonFilter.trim());
+  try {
+    const params = new URLSearchParams();
+    params.append("limit", String(limit));
+    params.append("league", league);
+    params.append("season", seasonFilter.trim());
+    params.append("status", "FT");        
+    params.append("with_probs", "1");     
 
-      const res = await fetch(
-        `http://127.0.0.1:5000/api/matches?${params.toString()}`
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const res = await fetch(
+      `${API}/api/matches?${params.toString()}`
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      const data = await res.json();
+    const data = await res.json();
 
-      let normalized = data.map((m) => ({
-        ...m,
-        _dateObj: m.date ? new Date(m.date) : null,
-      }));
+    const normalized = (data || []).map((m) => ({
+      ...m,
+      _dateObj: m.date ? new Date(m.date) : null,
+    }));
 
-      // finished = matches with date in the past
-      const now = new Date();
-      const finished = normalized.filter(
-        (m) => m._dateObj && !isNaN(m._dateObj.getTime()) && m._dateObj < now
-      );
+    // Sort by date ascending (optional; you can do DESC if you prefer latest first)
+    normalized.sort((a, b) => {
+      const da = a._dateObj ? a._dateObj.getTime() : 0;
+      const db = b._dateObj ? b._dateObj.getTime() : 0;
+      return da - db;
+    });
+    const finishedOnly = normalized.filter((m)=> m.status === "FT")
+    setFinishedMatches(finishedOnly)
 
-      finished.sort((a, b) => a._dateObj - b._dateObj);
-
-      if (!finished.length) {
-        setErrorFinished(
-          `No finished matches for ${league} in ${seasonFilter}.`
-        );
-      }
-
-      setFinishedMatches(finished);
-      setFinishedPage(0);
-    } catch (err) {
-      console.error(err);
-      setErrorFinished(err.message || "Failed to load finished matches");
-    } finally {
-      setLoadingFinished(false);
+    if (!normalized.length) {
+      setErrorFinished(`No finished matches for ${league} in ${seasonFilter}.`);
     }
-  };
+    setFinishedPage(0);
+  } catch (err) {
+    console.error(err);
+    setErrorFinished(err.message || "Failed to load finished matches");
+  } finally {
+    setLoadingFinished(false);
+  }
+};
 
-  //  Fetch upcoming matches from STATS CSV 
+// Fetch upcoming matches
   const fetchUpcomingMatches = async () => {
-    if (!league || !seasonFilter) return;
+  if (!league || !seasonFilter) return;
 
-    setLoadingUpcoming(true);
-    setErrorUpcoming("");
+  setLoadingUpcoming(true);
+  setErrorUpcoming("");
 
-    try {
-      const params = new URLSearchParams();
-      params.append("limit", "300");
-      params.append("league", league);
-      params.append("season", seasonFilter.trim());
+  try {
+    const params = new URLSearchParams();
+    params.append("limit", String(limit));
+    params.append("league", league);
+    params.append("season", seasonFilter.trim());
+    params.append("status", "NS");        
+    params.append("with_probs", "1");    
 
-      const res = await fetch(
-        `http://127.0.0.1:5000/api/upcoming_matches?${params.toString()}`
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const res = await fetch(
+      `${API}/api/matches?${params.toString()}`
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      const data = await res.json();
+    const data = await res.json();
 
-      const normalized = data.map((m) => ({
-        ...m,
-        _dateObj: m.date ? new Date(m.date) : null,
-      }));
+    const normalized = (data || []).map((m) => ({
+      ...m,
+      _dateObj: m.date ? new Date(m.date) : null,
+    }));
 
-      normalized.sort((a, b) => a._dateObj - b._dateObj);
+    normalized.sort((a, b) => {
+      const da = a._dateObj ? a._dateObj.getTime() : 0;
+      const db = b._dateObj ? b._dateObj.getTime() : 0;
+      return da - db;
+    });
 
-      setUpcomingMatches(normalized);
-      setUpcomingPage(0);
+    const upcomingOnly = normalized.filter((m) => m.status === "NS");
+    setUpcomingMatches(upcomingOnly);
+    setUpcomingPage(0);
 
-      if (!normalized.length) {
-        setErrorUpcoming(
-          `No upcoming matches for ${league} in season ${seasonFilter}.`
-        );
-      }
-    } catch (err) {
-      console.error(err);
-      setErrorUpcoming(err.message || "Failed to load upcoming matches");
-    } finally {
-      setLoadingUpcoming(false);
+    if (!normalized.length) {
+      setErrorUpcoming(`No upcoming matches for ${league} in season ${seasonFilter}.`);
     }
-  };
+  } catch (err) {
+    console.error(err);
+    setErrorUpcoming(err.message || "Failed to load upcoming matches");
+  } finally {
+    setLoadingUpcoming(false);
+  }
+};
+
+//fetch Live predictions
+const fetchLiveMatches = async () => {
+  if (!league) return;
+
+  setLoadingLive(true);
+  setErrorLive("");
+
+  try {
+    const params = new URLSearchParams();
+    params.append("limit", "50");
+
+    const res = await fetch(`${API}/api/live_predictions?${params.toString()}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+
+    const normalized = (data || [])
+      .map((m) => ({ ...m, _dateObj: m.date ? new Date(m.date) : null }))
+      // keep only this league 
+      .filter((m) => m.league === league)
+      .filter((m) => !seasonFilter || String(m.season) === String(seasonFilter))
+      // optional: avoid showing finished/NS in “Live”
+      .filter((m) => m.status && m.status !== "FT" && m.status !== "NS");
+
+    normalized.sort((a, b) => (b._dateObj?.getTime() || 0) - (a._dateObj?.getTime() || 0));
+
+    setLiveMatches(normalized);
+  } catch (err) {
+    console.error(err);
+    setErrorLive(err.message || "Failed to load live matches");
+  } finally {
+    setLoadingLive(false);
+  }
+};
 
   // Effects
   useEffect(() => {
@@ -164,6 +208,7 @@ const LeagueMatches = (props) => {
     if (league && seasonFilter) {
       fetchFinishedMatches();
       fetchUpcomingMatches();
+      fetchLiveMatches();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [league, seasonFilter, limit]);
@@ -234,6 +279,32 @@ const LeagueMatches = (props) => {
           </select>
         </div>
       </div>
+
+      {/* LIVE SECTION */}
+      <div style={{ marginBottom: "1rem" }}>
+        <h3 style={{ color: "white", marginBottom: "0.5rem", fontSize: "1rem" }}>
+          Live matches
+        </h3>
+
+        {loadingLive && (<p style={{ color: "white", fontSize: "0.85rem" }}>Loading…</p>)}
+        {!loadingLive && errorLive && (
+          <p style={{ color: "white", fontSize: "0.85rem" }}>{errorLive}</p>
+          )}
+          {!loadingLive && !errorLive && liveMatches.length === 0 && (
+            <p style={{ color: "white", fontSize: "0.85rem" }}>
+              No live matches right now.
+            </p>
+          )}
+
+        {liveMatches.length > 0 && (
+          <div className="matches-grid">
+            {liveMatches.slice(0, 6).map((match, idx) => (
+              <MatchCard key={match.fixture_id || `live-${idx}`}match={match}index={idx}/>
+              ))}
+              </div>
+            )}
+        </div>
+
 
       {/* UPCOMING SECTION – paginated */}
       <div style={{ marginBottom: "1rem" }}>
