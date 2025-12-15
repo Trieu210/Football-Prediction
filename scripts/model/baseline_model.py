@@ -12,16 +12,22 @@ from sklearn.metrics import (
 )
 
 
-DATA_DIR = Path("data_api_football")
+ROOT_DIR = Path(__file__).resolve().parents[2]
+DATA_DIR = ROOT_DIR / "data_api_football"
+
 FEATURES_CSV = DATA_DIR / "All_matches_features.csv"   
-OUTPUT_CSV = DATA_DIR / "matches_with_probs.csv"
-MODEL_PATH = DATA_DIR / "logreg_model.pkl"
-SCALER_PATH = DATA_DIR / "scaler.pkl"
+OUTPUT_CSV   = DATA_DIR / "matches_with_probs.csv"
+MODEL_PATH   = DATA_DIR / "Logreg_model.pkl"           
+SCALER_PATH  = DATA_DIR / "Scaler.pkl"
 
 
 def main():
     print("Loading features:", FEATURES_CSV)
     df = pd.read_csv(FEATURES_CSV)
+    print("ROOT_DIR:", ROOT_DIR)
+    print("DATA_DIR:", DATA_DIR)
+    print("FEATURES_CSV:", FEATURES_CSV)
+    print("Exists?", FEATURES_CSV.exists())
 
     # Features used for the model
     feature_cols = [
